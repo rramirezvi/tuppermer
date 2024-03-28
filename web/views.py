@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 
 from .models import Producto, Categoria
 # Create your views here.
@@ -24,3 +24,21 @@ def productos_por_categoria(request, categoria_id):
                'categorias': listaCategorias}  # Se crea el contexto
 
     return render(request, 'index.html', context)
+
+
+def productosPorNombre(request):
+    nombre = request.POST['nombre']
+
+    listaProductos = Producto.objects.filter(nombre__contains=nombre)
+    listaCategorias = Categoria.objects.all()
+    context = {'productos': listaProductos, 'categorias': listaCategorias}
+    return render(request, 'index.html', context)
+
+
+def productoDetalle(request, producto_id):
+
+    # objproducto = Producto.objects.get(pk=producto_id)
+    objeProducto = get_object_or_404(Producto, pk=producto_id)
+
+    context = {'producto': objeProducto}
+    return render(request, 'producto.html', context)
