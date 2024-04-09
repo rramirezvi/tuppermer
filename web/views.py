@@ -42,3 +42,10 @@ def productoDetalle(request, producto_id):
 
     context = {'producto': objeProducto}
     return render(request, 'producto.html', context)
+
+
+"""VISTAS PARA EL CARRITO DE COMPRAS"""
+
+
+def carrito(request):
+    return render(request, 'carrito.html')

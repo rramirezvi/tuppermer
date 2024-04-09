@@ -11,4 +11,5 @@ urlpatterns = [
          name='productosPorNombre'),
     path('productoDetalle/<int:producto_id>',
          views.productoDetalle, name='productoDetalle'),
+    path('carrito/', views.carrito, name='carrito'),
 ]
