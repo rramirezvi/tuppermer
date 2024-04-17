@@ -1,6 +1,7 @@
-from .forms import ClienteForm
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from .forms import ClienteForm
 from .carrito import Cart
 from django.shortcuts import render, get_object_or_404, redirect
 
@@ -94,33 +95,69 @@ def crearUsuario(request):
         dataUsuario = request.POST['nuevoUsuario']
         dataPassword = request.POST['nuevoPassword']
 
-        nuevoUsuario = User.objects.create_user(
-            username=dataUsuario, password=dataPassword)
-        if nuevoUsuario is not None:
-            login(request, nuevoUsuario)
-            return redirect('/cuenta/')
+        if User.objects.filter(username=dataUsuario).exists():
+            return render(request, 'login.html', {'mensaje': 'Usuario ya existe'})
+        else:
+            nuevoUsuario = User.objects.create_user(
+                username=dataUsuario, password=dataPassword)
+            if nuevoUsuario is not None:
+                login(request, nuevoUsuario)
+                return redirect('/cuenta/')
 
     return render(request, 'login.html')
 
 
 def loginUsuario(request):
+    paginaDestino = request.GET.get('next', None)
+    context = {
+        'destino': paginaDestino,
+    }
     if request.method == 'POST':
         dataUsuario = request.POST['usuario']
         dataPassword = request.POST['password']
+        dataDestino = request.POST['destino']
 
-        usuario = authenticate(
+        usuarioAuth = authenticate(
             request, username=dataUsuario, password=dataPassword)
-        if usuario is not None:
-            login(request, usuario)
-            return redirect('/cuenta/')
-        else:
-            return render(request, 'login.html', {'mensaje': 'Usuario o contraseña incorrecta'})
+        if usuarioAuth is not None:
+            login(request, usuarioAuth)
 
+            if dataDestino != '':
+                return redirect(dataDestino)
+
+            return redirect('/cuenta')
+
+        else:
+            context = {'mensaje': 'Usuario o contraseña incorrectos'}
+
+    return render(request, 'login.html', context)
+
+
+def logoutUsuario(request):
+    logout(request)
     return render(request, 'login.html')
 
 
 def cuentaUsuario(request):
-    frmCliente = ClienteForm()
+
+    try:
+        clienteEditar = Cientes.objects.get(usuario=request.user)
+
+        dataCliente = {'nombre': request.user.first_name,
+                       'apellido': request.user.last_name,
+                       'email': request.user.email,
+                       'direccion': clienteEditar.direccion,
+                       'telefono': clienteEditar.telefono,
+                       'cedula': clienteEditar.cedula,
+                       'sexo': clienteEditar.sexo,
+                       'fecha_nacimiento': clienteEditar.fecha_nacimiento
+                       }
+    except:
+        dataCliente = {'nombre': request.user.first_name,
+                       'apellido': request.user.last_name,
+                       'email': request.user.email, }
+
+    frmCliente = ClienteForm(dataCliente)
     context = {'frmCliente': frmCliente}
     return render(request, 'cuenta.html', context)
 
@@ -140,21 +177,61 @@ def actualizarCliente(request):
             actUsuario.email = dataCliente['email']
             actUsuario.save()
 
-            # registrar al cliente
-            nuevoCLiente = Cientes()
-            nuevoCLiente.usuario = actUsuario
-            nuevoCLiente.cedula = dataCliente['cedula']
-            nuevoCLiente.sexo = dataCliente['sexo']
-            nuevoCLiente.fecha_nacimiento = dataCliente['fecha_nacimiento']
-            nuevoCLiente.telefono = dataCliente['telefono']
-            nuevoCLiente.direccion = dataCliente['direccion']
-            nuevoCLiente.save()
+            # registrar o actualizar al cliente
+            if Cientes.objects.filter(usuario=actUsuario).exists():
+                actCliente = Cientes.objects.get(usuario=actUsuario)
+                actCliente.cedula = dataCliente['cedula']
+                actCliente.sexo = dataCliente['sexo']
+                actCliente.fecha_nacimiento = dataCliente['fecha_nacimiento']
+                actCliente.telefono = dataCliente['telefono']
+                actCliente.direccion = dataCliente['direccion']
+                actCliente.save()
+
+            else:
+                nuevoCLiente = Cientes()
+                nuevoCLiente.usuario = actUsuario
+                nuevoCLiente.cedula = dataCliente['cedula']
+                nuevoCLiente.sexo = dataCliente['sexo']
+                nuevoCLiente.fecha_nacimiento = dataCliente['fecha_nacimiento']
+                nuevoCLiente.telefono = dataCliente['telefono']
+                nuevoCLiente.direccion = dataCliente['direccion']
+                nuevoCLiente.save()
 
             mensaje = "Datos actualizados correctamente"
 
-            return redirect('/cuenta/')
     else:
         frmCliente = ClienteForm()
 
-    context = {'form': frmCliente, 'mensaje': mensaje}
+    context = {'frmCliente': frmCliente, 'mensaje': mensaje}
     return render(request, 'cuenta.html', context)
+
+
+"""VISTAS PARA EL PROCESO DE COMPRA"""
+
+
+# decorador para verificar que el usuario este logueado
+@login_required(login_url='/login/')
+def registrarPedido(request):
+
+    try:
+        clienteEditar = Cientes.objects.get(usuario=request.user)
+
+        dataCliente = {'nombre': request.user.first_name,
+                       'apellido': request.user.last_name,
+                       'email': request.user.email,
+                       'direccion': clienteEditar.direccion,
+                       'telefono': clienteEditar.telefono,
+                       'cedula': clienteEditar.cedula,
+                       'sexo': clienteEditar.sexo,
+                       'fecha_nacimiento': clienteEditar.fecha_nacimiento
+                       }
+    except:
+        dataCliente = {'nombre': request.user.first_name,
+                       'apellido': request.user.last_name,
+                       'email': request.user.email, }
+
+    frmCliente = ClienteForm(dataCliente)
+
+    context = {'frmCliente': frmCliente}
+
+    return render(request, 'pedido.html', context)

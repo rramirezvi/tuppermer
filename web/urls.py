@@ -21,4 +21,6 @@ urlpatterns = [
     path('cuenta/', views.cuentaUsuario, name='cuenta'),
     path('actualizarCliente/', views.actualizarCliente, name='actualizarCliente'),
     path('login/', views.loginUsuario, name='loginUsuario'),
+    path('logout/', views.logoutUsuario, name='logoutUsuario'),
+    path('registrarPedido/', views.registrarPedido, name='registrarPedido'),
 ]
